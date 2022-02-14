@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:db="http://www.mulesoft.org/schema/mule/db"
+	xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+	<flow name="getCarDetails" doc:id="eba33fa5-6f81-476d-96b4-efbd4e080b90" >
+		<db:select doc:name="Select all records" doc:id="9a9b445f-6ab3-4b3f-aef0-767021dd3f7a" config-ref="Database_Config" >
+			<db:sql ><![CDATA[select * from getUberCarDetails]]></db:sql>
+		</db:select>
+		<ee:transform doc:name="Transform Message" doc:id="6a3877f9-d0c4-45bc-80bf-9e018aa1e330" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
+	<flow name="postCarBooking" doc:id="d6eccdd6-5d30-4aa9-96c1-edb9e558cc26" >
+		<set-variable value="#[correlationId]" doc:name="Set Variable" doc:id="cea49ac9-e805-40a8-84ea-7c5930b765f0" variableName="bookingId" />
+		<set-variable value="#[payload.firstName]" doc:name="Set Variable" doc:id="18d870aa-df92-4d9b-9598-13c6ea07a5de" variableName="Name" />
+		<db:insert doc:name="Insert The Booking Records" doc:id="fffeecc6-c646-490f-80e3-cb0893014157" config-ref="Database_Config" >
+			<db:sql ><![CDATA[INSERT INTO `postUberBookingDetails`(`bookingId`,`partner`, `source`, `destination`, `city`, `typeOfCar`, `noOfSeats`, `firstName`,`lastName`) VALUES (:bookingId,:partner,:source,:destination,:city,:typeOfCar,:noOfSeats,:firstName,:lastName)]]></db:sql>
+			<db:input-parameters ><![CDATA[#[{'bookingId': vars.bookingId,'partner' : payload.partner, 'source' : payload.source, 'destination' : payload.destination, 'city' : payload.city, 'typeOfCar' : payload.typeOfCar, 'noOfSeats' : payload.noOfSeats, 'firstName' : payload.firstName, 'lastName' : payload.lastName}]]]></db:input-parameters>
+		</db:insert>
+		<ee:transform doc:name="Transform Message" doc:id="5fb296d1-7e15-4435-a1fc-26086c42d547" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+message: "Hello " ++ vars.Name ++ " car has been booked successfully. Please find Booking ID: " ++ vars.bookingId		
+}
+]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
+	<flow name="deleteBookingDetails" doc:id="30d66170-8b19-483a-b5b0-e4da0cb03b8f" >
+		<db:delete doc:name="DeleteBooking" doc:id="6f1fe23c-c25e-482a-8b26-21a9f17417a6" config-ref="Database_Config" >
+			<db:sql ><![CDATA[DELETE FROM `postUberBookingDetails` WHERE `bookingId` =:bookingId]]></db:sql>
+			<db:input-parameters ><![CDATA[#[{"bookingId": attributes.uriParams.'ID' as String}]]]></db:input-parameters>
+		</db:delete>
+		<ee:transform doc:name="Transform Message" doc:id="4c666bdc-ab27-43b4-ab18-0ce493d5c32b" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+  message: "Booking has been deleted"
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
+</mule>
